@@ -21,7 +21,7 @@ LABEL="spaetzle-$(basename "$WORKSPACE")"
 HOME_DIR="${HOME}"
 
 exec docker run -it \
-  --label "$LABEL" \
+  --name "$LABEL" \
   -v "$WORKSPACE:/workspace" \
   -w /workspace \
   -v "${HOME_DIR}/.gitconfig:/root/.gitconfig:ro" \
@@ -45,7 +45,7 @@ $HomeDir = $env:USERPROFILE
 
 $DockerArgs = @(
     "run", "-it",
-    "--label", $Label,
+    "--name", $Label,
     "-v", "$($Workspace):/workspace",
     "-w", "/workspace",
     "-v", "$HomeDir\.gitconfig:/root/.gitconfig:ro",
