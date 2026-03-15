@@ -9,7 +9,6 @@ A minimal but practical Docker-based development environment for running the
 
 ## Why the name "opencode-spaetzle"?
 
-The name is a playful nod to Swabian cuisine 🇩🇪.
 **Spätzle** (pronounced *shpets-leh*) are soft egg noodles — simple, comforting, and
 deeply satisfying — much like the developer experience this container tries to provide.
 
