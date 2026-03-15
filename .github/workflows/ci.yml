@@ -81,7 +81,7 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          github-token: "${{ secrets.GH_ACTION_MERGER_TOKEN }}"
 
       - name: Dependabot Auto Merge
         run: |
