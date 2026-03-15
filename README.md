@@ -15,18 +15,7 @@ deeply satisfying — much like the developer experience this container tries to
 
 The acronym unpacks as:
 
-| Letter | Meaning |
-|--------|---------|
-| **S** | Smart |
-| **P** | Programming |
-| **Ä** | Ägent |
-| **t** | for |
-| **z** | Task-realization |
-| **l** | with |
-| **e** | Zero-friction |
-| *(space)* | in a |
-| **L** | Locked-down |
-| **E** | Environment |
+**S**mart **P**rogramming **Ä**gent for **T**ask-realization with **Z**ero-friction in a **L**ocked-down **E**nvironment.
 
 Just like Spätzle, it gets the job done and leaves you happy.
 
