@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Documentation
+docs
+README.md
+LICENSE
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Editor / IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules
+npm-debug.log*
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+
+# Build artefacts
+dist
+build
+target
+*.o
+*.a
+
+# Secrets / env files
+.env
+.env.*
+*.pem
+*.key
