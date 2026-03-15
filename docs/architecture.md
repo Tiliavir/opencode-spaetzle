@@ -112,3 +112,39 @@ docker run -it -v $(pwd):/workspace opencode-dev
 - API keys must be supplied at runtime via `-e` environment variables
 - The image runs as `root` inside the container (acceptable for a local dev tool)
 - Trivy vulnerability scanning is integrated into the CI pipeline
+
+## Authentication design
+
+The image supports two complementary auth paths for the GitHub Copilot provider:
+
+### Environment variable (primary)
+
+`GITHUB_TOKEN` (or `GH_TOKEN`, normalised by `scripts/run.sh`) is the preferred
+mechanism. It requires no persistent files, is easy to rotate, and works cleanly
+in CI/CD and Dev Container environments.
+
+### Read-only credential mounts (secondary)
+
+For users who have already authenticated on the host, two stores can be mounted
+read-only:
+
+| Host path | Container path | Purpose |
+|-----------|---------------|---------|
+| `~/.config/github-copilot/` | `/root/.config/github-copilot/` | Copilot credential store |
+| `~/.local/share/opencode/` | `/root/.local/share/opencode/` | OpenCode auth store |
+
+All mounts are read-only (`:ro`) by convention — no credentials are ever written
+back to the host.
+
+## Git config injection
+
+Host Git identity and SSH keys can be injected via read-only mounts:
+
+| Host path | Container path | Purpose |
+|-----------|---------------|---------|
+| `~/.gitconfig` | `/root/.gitconfig` | Core Git identity and settings |
+| `~/.config/git/` | `/root/.config/git/` | XDG-style Git config directory |
+| `~/.ssh/` | `/root/.ssh/` | SSH keys for remote authentication |
+
+SSH remotes (`git@github.com:…`) are recommended over HTTPS because tokens are
+never exposed in URL strings or logs.
