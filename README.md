@@ -66,7 +66,8 @@ docker run -it \
   -v $(pwd):/workspace \
   -w /workspace \
   -e OPENAI_API_KEY=sk-... \
-  opencode-dev
+  -l optional-label \
+  ghcr.io/tiliavir/opencode-spaetzle:latest
 ```
 
 ---
