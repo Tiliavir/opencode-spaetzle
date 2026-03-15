@@ -7,6 +7,53 @@ A minimal but practical Docker-based development environment for running the
 
 ---
 
+## TLDR
+
+```bash
+#!/usr/bin/env bash
+
+docker run -it \
+  -v $(pwd):/workspace \
+  -w /workspace \
+  --label "spaetzle-$(basename $(pwd))" \
+  -v "${HOME}/.gitconfig:/root/.gitconfig:ro" \
+  -v "${HOME}/.config/git:/root/.config/git:ro" \
+  -v "${HOME}/.ssh:/root/.ssh:ro" \
+  -v "${HOME}/.local/share/opencode:/root/.local/share/opencode:ro" \
+  ghcr.io/tiliavir/opencode-spaetzle:latest
+```
+
+```powershell
+#!/usr/bin/env pwsh
+# Docker wrapper for opencode-spaetzle with auto-labeling and mounts
+
+$ErrorActionPreference = "Stop"
+
+$Image = $env:OPENCODE_IMAGE ?? "ghcr.io/tiliavir/opencode-spaetzle:latest"
+$Workspace = Get-Location
+$Label = "spaetzle-$(Split-Path -Leaf $Workspace)"
+$HomeDir = $env:USERPROFILE
+
+$DockerArgs = @(
+    "run", "-it",
+    "--label", $Label,
+    "-v", "$($Workspace):/workspace",
+    "-w", "/workspace",
+    "-v", "$HomeDir\.gitconfig:/root/.gitconfig:ro",
+    "-v", "$HomeDir\.config\git:/root/.config/git:ro",
+    "-v", "$HomeDir\.ssh:/root/.ssh:ro",
+    "-v", "$HomeDir\.local\share\opencode:/root/.local/share/opencode:ro",
+    $Image
+)
+
+# Pass through any additional arguments
+if ($args.Count -gt 0) {
+    $DockerArgs += $args
+}
+
+& docker @DockerArgs
+```
+
 ## Why the name "opencode-spaetzle"?
 
 **Spätzle** (pronounced *shpets-leh*) are soft egg noodles — simple, comforting, and
