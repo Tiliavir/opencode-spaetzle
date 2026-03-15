@@ -14,6 +14,8 @@ opencode-spaetzle/
 ├── docs/
 │   ├── architecture.md         # Image design decisions
 │   └── development.md          # This file
+├── scripts/
+│   └── run.sh                  # Convenience run wrapper (auto-mounts, forwards tokens)
 ├── Dockerfile                  # Main image definition
 ├── .dockerignore               # Files excluded from Docker build context
 ├── README.md                   # User-facing documentation
@@ -35,6 +37,12 @@ docker run -it \
   -v $(pwd):/workspace \
   -w /workspace \
   opencode-dev
+```
+
+Or use the convenience wrapper (auto-detects git config, SSH keys, and tokens):
+
+```bash
+./scripts/run.sh
 ```
 
 ### Lint the Dockerfile
