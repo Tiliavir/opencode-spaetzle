@@ -38,7 +38,7 @@ jobs:
         run: docker build -t opencode-spaetzle:scan .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: "opencode-spaetzle:scan"
           format: "sarif"
