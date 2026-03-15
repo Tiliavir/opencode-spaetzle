@@ -11,16 +11,25 @@ A minimal but practical Docker-based development environment for running the
 
 ```bash
 #!/usr/bin/env bash
+# Docker wrapper for opencode-spaetzle with auto-labeling and mounts
 
-docker run -it \
-  -v $(pwd):/workspace \
+set -euo pipefail
+
+IMAGE="${OPENCODE_IMAGE:-ghcr.io/tiliavir/opencode-spaetzle:latest}"
+WORKSPACE="$(pwd)"
+LABEL="spaetzle-$(basename "$WORKSPACE")"
+HOME_DIR="${HOME}"
+
+exec docker run -it \
+  --label "$LABEL" \
+  -v "$WORKSPACE:/workspace" \
   -w /workspace \
-  --label "spaetzle-$(basename $(pwd))" \
-  -v "${HOME}/.gitconfig:/root/.gitconfig:ro" \
-  -v "${HOME}/.config/git:/root/.config/git:ro" \
-  -v "${HOME}/.ssh:/root/.ssh:ro" \
-  -v "${HOME}/.local/share/opencode:/root/.local/share/opencode:ro" \
-  ghcr.io/tiliavir/opencode-spaetzle:latest
+  -v "${HOME_DIR}/.gitconfig:/root/.gitconfig:ro" \
+  -v "${HOME_DIR}/.config/git:/root/.config/git:ro" \
+  -v "${HOME_DIR}/.ssh:/root/.ssh:ro" \
+  -v "${HOME_DIR}/.local/share/opencode:/root/.local/share/opencode:ro" \
+  "$IMAGE" \
+  "$@"
 ```
 
 ```powershell
