@@ -46,7 +46,7 @@ RUN curl -fsSL https://opencode.ai/install | bash
 ENV PATH="/root/.local/bin:${PATH}"
 
 # Install GSD (get-shit-done-cc) and pre-configure for OpenCode
-RUN npx --yes get-shit-done-cc@latest
+RUN npx --yes get-shit-done-cc@latest --opencode --global
 
 # Pre-configure GSD to use OpenCode as the AI provider
 RUN mkdir -p /root/.config/gsd \
