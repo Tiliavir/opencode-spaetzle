@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop=3.2.2-2 \
     bat=0.22.1-4 \
     # Networking tools
-    iputils-ping=20221126-1+deb12u1 \
+    iputils-ping=3:20221126-1+deb12u1 \
     telnet=0.17+2.4-2+deb12u2 \
     && rm -rf /var/lib/apt/lists/*
 
