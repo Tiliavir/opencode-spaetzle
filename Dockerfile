@@ -51,11 +51,6 @@ ENV PATH="/root/.local/bin:${PATH}"
 # Install GSD (get-shit-done-cc) and pre-configure for OpenCode
 RUN npx --yes get-shit-done-cc@latest --opencode --global
 
-# Pre-configure GSD to use OpenCode as the AI provider
-RUN mkdir -p /root/.config/gsd \
-    && printf '{\n  "provider": "opencode",\n  "command": "opencode"\n}\n' \
-       > /root/.config/gsd/config.json
-
 WORKDIR /workspace
 
 CMD ["bash"]
