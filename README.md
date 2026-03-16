@@ -15,7 +15,7 @@ A minimal but practical Docker-based development environment for running the
 
 set -euo pipefail
 
-IMAGE="${OPENCODE_IMAGE:-ghcr.io/tiliavir/opencode-spaetzle:latest}"
+IMAGE="ghcr.io/tiliavir/opencode-spaetzle:latest"
 WORKSPACE="$(pwd)"
 LABEL="spaetzle-$(basename "$WORKSPACE")"
 HOME_DIR="${HOME}"
@@ -27,7 +27,7 @@ exec docker run -it \
   -v "${HOME_DIR}/.gitconfig:/root/.gitconfig:ro" \
   -v "${HOME_DIR}/.config/git:/root/.config/git:ro" \
   -v "${HOME_DIR}/.ssh:/root/.ssh:ro" \
-  -v "${HOME_DIR}/.local/share/opencode:/root/.local/share/opencode:ro" \
+  -v "${HOME_DIR}/.local/share/opencode/auth.json:/root/.local/share/opencode/auth.json:ro" \
   "$IMAGE" \
   "$@"
 ```
@@ -38,7 +38,7 @@ exec docker run -it \
 
 $ErrorActionPreference = "Stop"
 
-$Image = $env:OPENCODE_IMAGE ?? "ghcr.io/tiliavir/opencode-spaetzle:latest"
+$Image = "ghcr.io/tiliavir/opencode-spaetzle:latest"
 $Workspace = Get-Location
 $Label = "spaetzle-$(Split-Path -Leaf $Workspace)"
 $HomeDir = $env:USERPROFILE
@@ -51,7 +51,7 @@ $DockerArgs = @(
     "-v", "$HomeDir\.gitconfig:/root/.gitconfig:ro",
     "-v", "$HomeDir\.config\git:/root/.config/git:ro",
     "-v", "$HomeDir\.ssh:/root/.ssh:ro",
-    "-v", "$HomeDir\.local\share\opencode:/root/.local/share/opencode:ro",
+    "-v", "$HomeDir\.local\share\opencode\auth.json:/root/.local/share/opencode/auth.json:ro",
     $Image
 )
 
