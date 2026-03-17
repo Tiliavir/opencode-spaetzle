@@ -105,7 +105,7 @@ info "Workspace: ${WORKSPACE}"
 
 set -x
 exec docker run -it \
-  -v "${WORKSPACE}:/workspace" \
+  -v "${WORKSPACE}:/workspace:rw" \
   -w /workspace \
   "${MOUNTS[@]+"${MOUNTS[@]}"}" \
   "${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"}" \
