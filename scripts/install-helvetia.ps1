@@ -45,36 +45,16 @@ $tempDockerfile = [System.IO.Path]::GetTempFileName() + ".dockerfile"
 Write-Info "Creating temporary Dockerfile..."
 
 $dockerfileContent = @"
-FROM ${BaseImage}
+FROM jfrog.balgroupit.com/git-platform-docker/certbundler:latest AS certbundler
+FROM ghcr.io/tiliavir/opencode-spaetzle:0.0.3
 
-# Add company certificates (HELVETIA: customize this section)
-# Example: Copy CA certificates into the system trust store
-# COPY company-certs/*.crt /usr/local/share/ca-certificates/
-# RUN update-ca-certificates
-
-# Alternative: Copy certificates to a specific location for applications to use
-# COPY company-certs/*.crt /etc/ssl/certs/company-ca.crt
-
-# For Node.js/npm, you might need:
-# ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/company-ca.crt
-
-# For curl/wget:
-# ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/company-ca.crt
-
-# For Git:
-# ENV GIT_SSL_CAINFO=/etc/ssl/certs/company-ca.crt
-
-# ============================================================
-# IMPORTANT: Replace the section above with your company's
-# certificate installation steps before building!
-# ============================================================
-
-# Ensure OpenCode is on PATH
-ENV PATH="/root/.local/bin:`${PATH}"
+COPY --from=certbundler /app/certbundler /app/certbundler
+USER root
+RUN /app/certbundler && rm -f /app/certbundler
 
 WORKDIR /workspace
 
-CMD ["bash]
+CMD ["bash"]
 "@
 
 Set-Content -Path $tempDockerfile -Value $dockerfileContent -Encoding UTF8
