@@ -66,6 +66,55 @@ Remove-Item $tempDockerfile -Force
 
 Write-Info "Successfully built $Image"
 
+$containerHome = "/root"
+$homeDir = $env:USERPROFILE
+$configHome = Join-Path $homeDir ".config"
+$dataHome = Join-Path $homeDir ".local\share"
+
+$staticMountDefinitions = [System.Collections.Generic.List[string]]::new()
+$staticMountInfoLines = [System.Collections.Generic.List[string]]::new()
+
+function Add-StaticMountDefinition {
+    param(
+        [string]$HostPath,
+        [string]$ContainerPath,
+        [string]$Mode = "ro"
+    )
+
+    if (Test-Path $HostPath) {
+        $escapedHostPath = $HostPath.Replace("'", "''")
+        $escapedContainerPath = $ContainerPath.Replace("'", "''")
+        $staticMountDefinitions.Add("    @{ HostPath = '$escapedHostPath'; ContainerPath = '$escapedContainerPath'; Mode = '$Mode' }")
+        $staticMountInfoLines.Add("Write-Info \"Mounting $HostPath to $ContainerPath ($Mode)\"")
+    }
+}
+
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".gitconfig") -ContainerPath "$containerHome/.gitconfig"
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".config\git") -ContainerPath "$containerHome/.config/git"
+
+$sshDir = Join-Path $homeDir ".ssh"
+if (Test-Path $sshDir) {
+    Add-StaticMountDefinition -HostPath $sshDir -ContainerPath "$containerHome/.ssh"
+} else {
+    Write-Warn "No ~/.ssh directory found - SSH-based git remotes will not work"
+}
+
+Add-StaticMountDefinition -HostPath (Join-Path $configHome "github-copilot") -ContainerPath "$containerHome/.config/github-copilot"
+Add-StaticMountDefinition -HostPath (Join-Path $configHome "npm") -ContainerPath "$containerHome/.config/npm"
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".npmrc") -ContainerPath "$containerHome/.npmrc"
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".m2") -ContainerPath "$containerHome/.m2"
+Add-StaticMountDefinition -HostPath (Join-Path $dataHome "opencode") -ContainerPath "$containerHome/.local/share/opencode"
+
+$staticMountsBlock = "    # No optional mounts detected during installation"
+if ($staticMountDefinitions.Count -gt 0) {
+    $staticMountsBlock = $staticMountDefinitions -join "`n"
+}
+
+$staticMountInfoBlock = "Write-Info \"No optional mounts configured\""
+if ($staticMountInfoLines.Count -gt 0) {
+    $staticMountInfoBlock = $staticMountInfoLines -join "`n"
+}
+
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
@@ -81,7 +130,7 @@ Write-Info "Writing spaetzle wrapper to $spaetzleScript..."
 $scriptContent = @'
 # spaetzle — Docker wrapper for opencode-spaetzle (helvetia version)
 #
-# Automatically detects and mounts host paths (Git config, SSH keys,
+# Uses host paths detected during installation (Git config, SSH keys,
 # npmrc, Maven settings) and forwards API tokens when present.
 #
 # Usage:
@@ -131,61 +180,15 @@ $dockerArgs += @("--name", $label)
 $dockerArgs += @("-v", "${Workspace}:/workspace:rw")
 $dockerArgs += @("-w", "/workspace")
 
-$homeDir = $env:USERPROFILE
-$containerHome = "/root"
+$StaticMounts = @(
+__STATIC_MOUNTS__
+)
 
-function Add-Mount {
-    param(
-        [string]$HostPath,
-        [string]$ContainerPath,
-        [string]$Mode = "ro"
-    )
-
-    if (Test-Path $HostPath) {
-        $dockerArgs += @("-v", "${HostPath}:${ContainerPath}:${Mode}")
-        Write-Info "Mounting ${HostPath} → ${ContainerPath} (${Mode})"
-    }
+foreach ($mount in $StaticMounts) {
+    $dockerArgs += @("-v", "$($mount.HostPath):$($mount.ContainerPath):$($mount.Mode)")
 }
 
-$gitconfig = Join-Path $homeDir ".gitconfig"
-Add-Mount -HostPath $gitconfig -ContainerPath "$containerHome/.gitconfig"
-
-$gitConfigDir = Join-Path $homeDir ".config\git"
-if (Test-Path $gitConfigDir) {
-    Add-Mount -HostPath $gitConfigDir -ContainerPath "$containerHome/.config/git"
-}
-
-$sshDir = Join-Path $homeDir ".ssh"
-if (Test-Path $sshDir) {
-    Add-Mount -HostPath $sshDir -ContainerPath "$containerHome/.ssh"
-} else {
-    Write-Warn "No ~/.ssh directory found — SSH-based git remotes will not work"
-}
-
-$githubCopilotDir = Join-Path $homeDir ".config\github-copilot"
-if (Test-Path $githubCopilotDir) {
-    Add-Mount -HostPath $githubCopilotDir -ContainerPath "$containerHome/.config/github-copilot"
-}
-
-$npmConfigDir = Join-Path $homeDir ".config\npm"
-if (Test-Path $npmConfigDir) {
-    Add-Mount -HostPath $npmConfigDir -ContainerPath "$containerHome/.config/npm"
-}
-
-$npmrc = Join-Path $homeDir ".npmrc"
-if (Test-Path $npmrc) {
-    Add-Mount -HostPath $npmrc -ContainerPath "$containerHome/.npmrc"
-}
-
-$m2Dir = Join-Path $homeDir ".m2"
-if (Test-Path $m2Dir) {
-    Add-Mount -HostPath $m2Dir -ContainerPath "$containerHome/.m2"
-}
-
-$opencodeDir = Join-Path $homeDir ".local\share\opencode"
-if (Test-Path $opencodeDir) {
-    Add-Mount -HostPath $opencodeDir -ContainerPath "$containerHome/.local/share/opencode"
-}
+__STATIC_MOUNT_INFO__
 
 if ($env:GITHUB_TOKEN) {
     $dockerArgs += @("-e", "GITHUB_TOKEN=${env:GITHUB_TOKEN}")
@@ -221,6 +224,9 @@ Write-Info "Container label: $label"
 
 & docker @dockerArgs
 '@
+
+$scriptContent = $scriptContent.Replace("__STATIC_MOUNTS__", $staticMountsBlock)
+$scriptContent = $scriptContent.Replace("__STATIC_MOUNT_INFO__", $staticMountInfoBlock)
 
 Set-Content -Path $spaetzleScript -Value $scriptContent -Encoding UTF8
 

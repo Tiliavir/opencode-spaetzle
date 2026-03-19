@@ -70,6 +70,67 @@ fi
 
 info "Docker found: $(docker --version)"
 
+CONTAINER_USER_HOME="/root"
+HOME_DIR="${HOME}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME_DIR}/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME_DIR}/.local/share}"
+
+escape_for_double_quotes() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//\$/\\\$}"
+    value="${value//\`/\\\`}"
+    printf '%s' "$value"
+}
+
+STATIC_MOUNT_LINES=()
+STATIC_MOUNT_INFO_LINES=()
+
+add_static_mount() {
+    local host_path="$1"
+    local container_path="$2"
+    local mode="${3:-ro}"
+
+    if [ -e "$host_path" ]; then
+        local escaped_host
+        local escaped_container
+        escaped_host="$(escape_for_double_quotes "$host_path")"
+        escaped_container="$(escape_for_double_quotes "$container_path")"
+        STATIC_MOUNT_LINES+=("    \"-v\" \"${escaped_host}:${escaped_container}:${mode}\"")
+        STATIC_MOUNT_INFO_LINES+=("info \"Mounting ${escaped_host} → ${escaped_container} (${mode})\"")
+    fi
+}
+
+add_static_mount "${HOME_DIR}/.gitconfig" "${CONTAINER_USER_HOME}/.gitconfig"
+add_static_mount "${HOME_DIR}/.config/git" "${CONTAINER_USER_HOME}/.config/git"
+
+if [ -d "${HOME_DIR}/.ssh" ]; then
+    add_static_mount "${HOME_DIR}/.ssh" "${CONTAINER_USER_HOME}/.ssh"
+else
+    warn "No ~/.ssh directory found — SSH-based git remotes will not work"
+fi
+
+add_static_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/github-copilot"
+add_static_mount "${XDG_CONFIG_HOME}/npm" "${CONTAINER_USER_HOME}/.config/npm"
+add_static_mount "${HOME_DIR}/.npmrc" "${CONTAINER_USER_HOME}/.npmrc"
+add_static_mount "${HOME_DIR}/.m2" "${CONTAINER_USER_HOME}/.m2"
+add_static_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/opencode"
+
+if [ "${#STATIC_MOUNT_LINES[@]}" -eq 0 ]; then
+    warn "No optional host mounts detected at install time"
+fi
+
+STATIC_MOUNTS_BLOCK="# No optional mounts detected during installation"
+if [ "${#STATIC_MOUNT_LINES[@]}" -gt 0 ]; then
+    STATIC_MOUNTS_BLOCK="$(printf '%s\n' "${STATIC_MOUNT_LINES[@]}")"
+fi
+
+STATIC_MOUNT_INFO_BLOCK="# No optional mounts configured"
+if [ "${#STATIC_MOUNT_INFO_LINES[@]}" -gt 0 ]; then
+    STATIC_MOUNT_INFO_BLOCK="$(printf '%s\n' "${STATIC_MOUNT_INFO_LINES[@]}")"
+fi
+
 mkdir -p "${INSTALL_DIR}"
 if [ ! -w "${INSTALL_DIR}" ]; then
     error "Cannot write to ${INSTALL_DIR}. Use --install-dir to specify a writable location."
@@ -77,11 +138,11 @@ fi
 
 info "Writing spaetzle wrapper to ${INSTALL_DIR}/${SCRIPT_NAME}..."
 
-cat > "${INSTALL_DIR}/${SCRIPT_NAME}" << 'WRAPPER_EOF'
+wrapper_template="$(cat << 'WRAPPER_EOF'
 #!/usr/bin/env bash
 # spaetzle — Docker wrapper for opencode-spaetzle
 #
-# Automatically detects and mounts host paths (Git config, SSH keys,
+# Uses host paths detected during installation (Git config, SSH keys,
 # npmrc, Maven settings) and forwards API tokens when present.
 #
 # Usage:
@@ -97,20 +158,9 @@ set -euo pipefail
 
 IMAGE="${OPENCODE_IMAGE:-ghcr.io/tiliavir/opencode-spaetzle:latest}"
 WORKSPACE="${WORKSPACE:-$(pwd)}"
-CONTAINER_USER_HOME="${CONTAINER_USER_HOME:-/root}"
 
 warn()  { echo "[spaetzle] WARNING: $*" >&2; }
 info()  { echo "[spaetzle] $*"; }
-
-maybe_mount() {
-    local host_path="$1"
-    local container_path="$2"
-    local mode="${3:-ro}"
-    if [ -e "$host_path" ]; then
-        MOUNTS+=("-v" "${host_path}:${container_path}:${mode}")
-        info "Mounting ${host_path} → ${container_path} (${mode})"
-    fi
-}
 
 if [[ "${1:-}" == "--version" ]] || [[ "${1:-}" == "-v" ]]; then
     echo "spaetzle wrapper for opencode-spaetzle"
@@ -154,33 +204,11 @@ for var in OPENAI_API_KEY ANTHROPIC_API_KEY; do
     fi
 done
 
-MOUNTS=()
+MOUNTS=(
+__STATIC_MOUNTS__
+)
 
-HOME_DIR="${HOME}"
-
-maybe_mount "${HOME_DIR}/.gitconfig"     "${CONTAINER_USER_HOME}/.gitconfig"
-maybe_mount "${HOME_DIR}/.config/git"    "${CONTAINER_USER_HOME}/.config/git"
-
-if [ -d "${HOME_DIR}/.ssh" ]; then
-    maybe_mount "${HOME_DIR}/.ssh" "${CONTAINER_USER_HOME}/.ssh"
-else
-    warn "No ~/.ssh directory found — SSH-based git remotes will not work"
-fi
-
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME_DIR}/.config}"
-maybe_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/github-copilot"
-maybe_mount "${XDG_CONFIG_HOME}/npm" "${CONTAINER_USER_HOME}/.config/npm"
-
-if [ -f "${HOME_DIR}/.npmrc" ]; then
-    maybe_mount "${HOME_DIR}/.npmrc" "${CONTAINER_USER_HOME}/.npmrc"
-fi
-
-if [ -d "${HOME_DIR}/.m2" ]; then
-    maybe_mount "${HOME_DIR}/.m2" "${CONTAINER_USER_HOME}/.m2"
-fi
-
-XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME_DIR}/.local/share}"
-maybe_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/opencode"
+__STATIC_MOUNT_INFO__
 
 LABEL="spaetzle-$(basename "${WORKSPACE}")"
 
@@ -198,6 +226,13 @@ exec docker run -it \
     "${IMAGE}" \
     "${CMD_OVERRIDE[@]+"${CMD_OVERRIDE[@]}"}"
 WRAPPER_EOF
+)"
+
+wrapper_content="$wrapper_template"
+wrapper_content="${wrapper_content/__STATIC_MOUNTS__/${STATIC_MOUNTS_BLOCK}}"
+wrapper_content="${wrapper_content/__STATIC_MOUNT_INFO__/${STATIC_MOUNT_INFO_BLOCK}}"
+
+printf '%s\n' "$wrapper_content" > "${INSTALL_DIR}/${SCRIPT_NAME}"
 
 chmod +x "${INSTALL_DIR}/${SCRIPT_NAME}"
 
