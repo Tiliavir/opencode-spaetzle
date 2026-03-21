@@ -222,6 +222,21 @@ Write-Info "Starting opencode-spaetzle container (image: $Image)"
 Write-Info "Workspace: $Workspace"
 Write-Info "Container label: $label"
 
+docker container inspect $label 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    $containerStatus = (docker container inspect --format '{{.State.Status}}' $label 2>$null)
+    if ($containerStatus -eq "running") {
+        Write-Info "Container '$label' is already running — reconnecting..."
+        Write-Warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
+        & docker exec -it $label bash
+    } else {
+        Write-Info "Container '$label' exists but is stopped — restarting..."
+        Write-Warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
+        & docker start -ai $label
+    }
+    exit
+}
+
 & docker @dockerArgs
 '@
 

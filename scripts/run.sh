@@ -100,11 +100,27 @@ maybe_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/ope
 
 # ── launch ─────────────────────────────────────────────────────────────────────
 
+LABEL="spaetzle-$(basename "${WORKSPACE}")"
+
 info "Starting opencode-spaetzle container (image: ${IMAGE})"
 info "Workspace: ${WORKSPACE}"
+info "Container label: ${LABEL}"
 
-set -x
+if docker container inspect "${LABEL}" &>/dev/null; then
+  STATUS="$(docker container inspect --format '{{.State.Status}}' "${LABEL}")"
+  if [ "${STATUS}" = "running" ]; then
+    info "Container '${LABEL}' is already running — reconnecting..."
+    warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
+    exec docker exec -it "${LABEL}" bash
+  else
+    info "Container '${LABEL}' exists but is stopped — restarting..."
+    warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
+    exec docker start -ai "${LABEL}"
+  fi
+fi
+
 exec docker run -it \
+  --name "${LABEL}" \
   -v "${WORKSPACE}:/workspace:rw" \
   -w /workspace \
   "${MOUNTS[@]+"${MOUNTS[@]}"}" \
