@@ -85,7 +85,7 @@ function Add-StaticMountDefinition {
         $escapedHostPath = $HostPath.Replace("'", "''")
         $escapedContainerPath = $ContainerPath.Replace("'", "''")
         $staticMountDefinitions.Add("    @{ HostPath = '$escapedHostPath'; ContainerPath = '$escapedContainerPath'; Mode = '$Mode' }")
-        $staticMountInfoLines.Add("Write-Info \"Mounting $HostPath to $ContainerPath ($Mode)\"")
+        $staticMountInfoLines.Add("Write-Info `"Mounting $HostPath to $ContainerPath ($Mode)`"")
     }
 }
 
@@ -102,15 +102,15 @@ if (Test-Path $sshDir) {
 Add-StaticMountDefinition -HostPath (Join-Path $configHome "github-copilot") -ContainerPath "$containerHome/.config/github-copilot"
 Add-StaticMountDefinition -HostPath (Join-Path $configHome "npm") -ContainerPath "$containerHome/.config/npm"
 Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".npmrc") -ContainerPath "$containerHome/.npmrc"
-Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".m2") -ContainerPath "$containerHome/.m2"
-Add-StaticMountDefinition -HostPath (Join-Path $dataHome "opencode") -ContainerPath "$containerHome/.local/share/opencode"
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".m2") -ContainerPath "$containerHome/.m2" -Mode "rw"
+Add-StaticMountDefinition -HostPath (Join-Path $dataHome "opencode") -ContainerPath "$containerHome/.local/share/opencode" -Mode "rw"
 
 $staticMountsBlock = "    # No optional mounts detected during installation"
 if ($staticMountDefinitions.Count -gt 0) {
     $staticMountsBlock = $staticMountDefinitions -join "`n"
 }
 
-$staticMountInfoBlock = "Write-Info \"No optional mounts configured\""
+$staticMountInfoBlock = "Write-Info `"No optional mounts configured`""
 if ($staticMountInfoLines.Count -gt 0) {
     $staticMountInfoBlock = $staticMountInfoLines -join "`n"
 }
@@ -246,7 +246,8 @@ $scriptContent = $scriptContent.Replace("__STATIC_MOUNT_INFO__", $staticMountInf
 Set-Content -Path $spaetzleScript -Value $scriptContent -Encoding UTF8
 
 $cmdScript = Join-Path $InstallDir "spaetzle.cmd"
-$cmdContent = @"@echo off
+$cmdContent = @"
+@echo off
 REM spaetzle.cmd — Windows command wrapper for spaetzle.ps1
 
 set "SCRIPT_DIR=$InstallDir"
