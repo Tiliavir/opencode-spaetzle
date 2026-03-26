@@ -169,7 +169,7 @@ if ($env:GITHUB_TOKEN) {
     $dockerArgs += @("-e", "GITHUB_TOKEN=${env:GH_TOKEN}")
     Write-Info "Forwarding GH_TOKEN as GITHUB_TOKEN"
 } else {
-    Write-Warn "No GITHUB_TOKEN / GH_TOKEN set — GitHub Copilot provider will not work without auth"
+    Write-Warn "No GITHUB_TOKEN / GH_TOKEN set - GitHub Copilot provider will not work without auth"
 }
 
 @("OPENAI_API_KEY", "ANTHROPIC_API_KEY") | ForEach-Object {
@@ -198,11 +198,11 @@ docker container inspect $label 2>$null | Out-Null
 if ($LASTEXITCODE -eq 0) {
     $containerStatus = (docker container inspect --format '{{.State.Status}}' $label 2>$null)
     if ($containerStatus -eq "running") {
-        Write-Info "Container '$label' is already running — reconnecting..."
+        Write-Info "Container '$label' is already running - reconnecting..."
         Write-Warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
         & docker exec -it $label bash
     } else {
-        Write-Info "Container '$label' exists but is stopped — restarting..."
+        Write-Info "Container '$label' exists but is stopped - restarting..."
         Write-Warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
         & docker start -ai $label
     }
