@@ -10,7 +10,7 @@ This document describes the design decisions behind the `opencode-spaetzle` Dock
 |-----------|-------------------|
 | Stability | Debian stable (bookworm = Debian 12) has long support and predictable behaviour |
 | Compatibility | The Debian package ecosystem has the best coverage for developer tools |
-| Node.js | `nodejs` and `npm` packages are available directly from `apt` without additional PPAs |
+| Node.js | Node.js 22 is installed via the [NodeSource](https://github.com/nodesource/distributions) APT repository (Debian ships only Node 18, but GSD2 requires ≥ 22) |
 | Size | `-slim` variant strips locale data and documentation, keeping the image small |
 | Security | Minimal attack surface compared to a full Debian image |
 
@@ -27,6 +27,11 @@ debian:bookworm-slim
                      └── GSD install + config
                           └── Claude Code CLI (curl install)
                                └── WORKDIR /workspace
+                └── Node.js 22 (NodeSource)
+                     └── OpenCode CLI (curl install)
+                          └── GSD install + config
+                               └── GSD2 install (gsd-pi)
+                                    └── WORKDIR /workspace
 ```
 
 All `apt-get` commands are combined in a single `RUN` layer and the apt cache is
@@ -42,7 +47,7 @@ in the image.
 | `git` | Source control — essential for any coding agent workflow |
 | `curl` | HTTP client — used to install OpenCode and other tools |
 | `ca-certificates` | TLS trust store — required for `curl` over HTTPS |
-| `nodejs` / `npm` | JavaScript runtime — required by OpenCode CLI and GSD |
+| `nodejs` 22 / `npm` | JavaScript runtime — installed via NodeSource; required by OpenCode CLI, GSD, and GSD2 (≥ 22) |
 | `python3` / `python3-pip` | Python runtime — many repositories use Python tooling |
 | `build-essential` | C compiler and `make` — required for native npm modules |
 
@@ -97,6 +102,20 @@ ENV PATH="/root/.local/bin:${PATH}"
 productivity CLI. It is installed via `npx` during the build and pre-configured
 to use OpenCode as its AI backend through a config file placed at
 `/root/.config/gsd/config.json`.
+
+## GSD2 configuration
+
+[GSD2 (gsd-pi)](https://github.com/gsd-build/gsd-2) is the second-generation GSD
+CLI. It is installed globally via npm:
+
+```dockerfile
+RUN npm install -g gsd-pi
+```
+
+GSD2 requires Node.js ≥ 22, which is why Node.js is sourced from NodeSource rather
+than the Debian package repositories. The `gsd` and `gsd-cli` binaries are both
+provided by the `gsd-pi` package and the version is pinned in the `Dockerfile`
+(`gsd-pi@2.58.0`).
 
 ## Claude Code installation
 
