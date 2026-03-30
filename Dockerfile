@@ -51,6 +51,9 @@ ENV PATH="/root/.local/bin:${PATH}"
 # Install GSD (get-shit-done-cc) and pre-configure for OpenCode
 RUN npx --yes get-shit-done-cc@latest --opencode --global
 
+# Install Claude Code CLI
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
 WORKDIR /workspace
 
 CMD ["bash"]

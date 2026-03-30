@@ -37,6 +37,7 @@ This starts the container with your current directory mounted as `/workspace`.
 - Full **Node.js / npm** stack for OpenCode and related tooling
 - Rich set of **CLI tools**: `ripgrep`, `fd`, `bat`, `tree`, `ctags`, `jq`, `htop` and more
 - **[OpenCode CLI](https://opencode.ai)** pre-installed and on `PATH`
+- **[Claude Code CLI](https://claude.ai/code)** pre-installed and on `PATH`
 - **[GSD (get-shit-done-cc)](https://www.npmjs.com/package/get-shit-done-cc)** pre-installed and pre-configured for OpenCode
 - Sensible shell aliases (`ll`, `cat` → `batcat`)
 - Interactive terminal support (`TERM=xterm-256color`)
@@ -62,6 +63,7 @@ This starts the container with your current directory mounted as `/workspace`.
 | `~/.m2/` | `/root/.m2/` | ro |
 | `~/.config/github-copilot/` | `/root/.config/github-copilot/` | ro |
 | `~/.local/share/opencode/` | `/root/.local/share/opencode/` | ro |
+| `~/.claude/` | `/root/.claude/` | ro |
 | `$(pwd)` | `/workspace` | **rw** |
 
 ---
@@ -155,7 +157,8 @@ Add `.devcontainer/devcontainer.json` to your project:
     "source=${localEnv:HOME}/.config/git,target=/root/.config/git,type=bind,readonly",
     "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
     "source=${localEnv:HOME}/.config/github-copilot,target=/root/.config/github-copilot,type=bind,readonly",
-    "source=${localEnv:HOME}/.local/share/opencode,target=/root/.local/share/opencode,type=bind,readonly"
+    "source=${localEnv:HOME}/.local/share/opencode,target=/root/.local/share/opencode,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,readonly"
   ],
   "postCreateCommand": "opencode --version",
   "terminal.integrated.defaultProfile.linux": "bash"

@@ -25,7 +25,8 @@ debian:bookworm-slim
            └── shell aliases
                 └── OpenCode CLI (curl install)
                      └── GSD install + config
-                          └── WORKDIR /workspace
+                          └── Claude Code CLI (curl install)
+                               └── WORKDIR /workspace
 ```
 
 All `apt-get` commands are combined in a single `RUN` layer and the apt cache is
@@ -97,6 +98,27 @@ productivity CLI. It is installed via `npx` during the build and pre-configured
 to use OpenCode as its AI backend through a config file placed at
 `/root/.config/gsd/config.json`.
 
+## Claude Code installation
+
+[Claude Code](https://claude.ai/code) is Anthropic's agentic coding CLI. It is
+installed using its official install script:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+The script places the binary in `~/.local/bin`, which is already on `PATH` via
+the `ENV PATH="/root/.local/bin:${PATH}"` instruction added for OpenCode.
+
+Authentication credentials are stored in `~/.claude/` on the host and can be
+made available inside the container via a read-only bind mount:
+
+```bash
+docker run -it -v ~/.claude:/root/.claude:ro opencode-dev
+```
+
+`scripts/run.sh` mounts this directory automatically when it exists.
+
 ## Working directory
 
 The container uses `/workspace` as the default working directory. This is the
@@ -125,13 +147,14 @@ in CI/CD and Dev Container environments.
 
 ### Read-only credential mounts (secondary)
 
-For users who have already authenticated on the host, two stores can be mounted
+For users who have already authenticated on the host, three stores can be mounted
 read-only:
 
 | Host path | Container path | Purpose |
 |-----------|---------------|---------|
 | `~/.config/github-copilot/` | `/root/.config/github-copilot/` | Copilot credential store |
 | `~/.local/share/opencode/` | `/root/.local/share/opencode/` | OpenCode auth store |
+| `~/.claude/` | `/root/.claude/` | Claude Code credential store |
 
 All mounts are read-only (`:ro`) by convention — no credentials are ever written
 back to the host.
