@@ -34,10 +34,11 @@ This starts the container with your current directory mounted as `/workspace`.
 ## Features
 
 - **Debian bookworm-slim** base — minimal, stable, production-grade
-- Full **Node.js / npm** stack for OpenCode and related tooling
+- Full **Node.js 22 / npm** stack for OpenCode and related tooling (via [NodeSource](https://github.com/nodesource/distributions))
 - Rich set of **CLI tools**: `ripgrep`, `fd`, `bat`, `tree`, `ctags`, `jq`, `htop` and more
 - **[OpenCode CLI](https://opencode.ai)** pre-installed and on `PATH`
 - **[GSD (get-shit-done-cc)](https://www.npmjs.com/package/get-shit-done-cc)** pre-installed and pre-configured for OpenCode
+- **[GSD2 (gsd-pi)](https://github.com/gsd-build/gsd-2)** pre-installed (`gsd` / `gsd-cli` commands available)
 - Sensible shell aliases (`ll`, `cat` → `batcat`)
 - Interactive terminal support (`TERM=xterm-256color`)
 
