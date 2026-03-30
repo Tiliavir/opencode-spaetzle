@@ -12,8 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git=1:2.39.5-0+deb12u3 \
     curl=7.88.1-10+deb12u14 \
     ca-certificates=20230311+deb12u1 \
-    nodejs=18.20.4+dfsg-1~deb12u1 \
-    npm=9.2.0~ds1-1 \
     python3=3.11.2-1+b1 \
     python3-pip=23.0.1+dfsg-1 \
     build-essential=12.9 \
@@ -42,6 +40,11 @@ RUN ln -s /usr/bin/fdfind /usr/local/bin/fd
 RUN echo 'alias ll="ls -lah"' >> /root/.bashrc \
     && echo 'alias cat="batcat --paging=never"' >> /root/.bashrc
 
+# Install Node.js 22 via NodeSource (gsd-pi requires Node >= 22)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=22.22.0-1nodesource1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install OpenCode CLI
 RUN curl -fsSL https://opencode.ai/install | bash
 
@@ -50,6 +53,9 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 # Install GSD (get-shit-done-cc) and pre-configure for OpenCode
 RUN npx --yes get-shit-done-cc@latest --opencode --global
+
+# Install GSD2 (gsd-pi)
+RUN npm install -g gsd-pi@2.58.0
 
 WORKDIR /workspace
 
