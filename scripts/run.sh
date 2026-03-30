@@ -98,6 +98,9 @@ maybe_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/
 XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
 maybe_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/opencode"
 
+# Claude Code credential store (read-only)
+maybe_mount "${HOME}/.claude" "${CONTAINER_USER_HOME}/.claude"
+
 # ── launch ─────────────────────────────────────────────────────────────────────
 
 LABEL="spaetzle-$(basename "${WORKSPACE}")"

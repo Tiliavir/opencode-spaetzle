@@ -57,6 +57,9 @@ RUN npx --yes get-shit-done-cc@latest --opencode --global
 # Install GSD2 (gsd-pi)
 RUN npm install -g gsd-pi@2.58.0
 
+# Install Claude Code CLI
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
 WORKDIR /workspace
 
 CMD ["bash"]
