@@ -93,9 +93,21 @@ RUN pip install --break-system-packages --no-cache-dir "graphifyy[all]"
 # Install Caveman — output token compression for AI agents
 RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
 
-# Install GSD2 (gsd-pi) and Ponytail (ponytail)
-RUN npm install -g gsd-pi@3.0.0 \
-    && npm install -g ponytail@1.0.57
+# Install GSD2 (gsd-pi)
+RUN npm install -g gsd-pi@3.0.0
+
+# Install Ponytail v4.7.0 — AI agent "lazy senior dev" skill (DietrichGebert/ponytail)
+# Clones to /opt/ponytail and registers the OpenCode plugin in the global config
+RUN git clone --depth 1 --branch v4.7.0 https://github.com/DietrichGebert/ponytail.git /opt/ponytail \
+    && mkdir -p /root/.config/opencode \
+    && if [ -f /root/.config/opencode/opencode.json ]; then \
+           jq '.plugin += ["/opt/ponytail/.opencode/plugins/ponytail.mjs"]' \
+               /root/.config/opencode/opencode.json > /tmp/opencode.json \
+           && mv /tmp/opencode.json /root/.config/opencode/opencode.json; \
+       else \
+           printf '{"$schema":"https://opencode.ai/config.json","plugin":["/opt/ponytail/.opencode/plugins/ponytail.mjs"]}\n' \
+               > /root/.config/opencode/opencode.json; \
+       fi
 
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
