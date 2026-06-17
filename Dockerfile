@@ -97,16 +97,18 @@ RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/inst
 RUN npm install -g gsd-pi@3.0.0
 
 # Install Ponytail v4.7.0 — AI agent "lazy senior dev" skill (DietrichGebert/ponytail)
-# Clones to /opt/ponytail (pinned to v4.7.0 SHA) and registers the OpenCode plugin in the global config
-RUN git clone --depth 1 https://github.com/DietrichGebert/ponytail.git /opt/ponytail \
-    && git -C /opt/ponytail checkout adad50d9b393926b2dd5ed7225dcb1848b9df408 \
+# Fetches exactly the v4.7.0 commit SHA and registers the OpenCode plugin in the global config
+RUN git init /opt/ponytail \
+    && git -C /opt/ponytail remote add origin https://github.com/DietrichGebert/ponytail.git \
+    && git -C /opt/ponytail fetch --depth 1 origin adad50d9b393926b2dd5ed7225dcb1848b9df408 \
+    && git -C /opt/ponytail checkout FETCH_HEAD \
     && mkdir -p /root/.config/opencode \
     && if [ -f /root/.config/opencode/opencode.json ]; then \
            jq '.plugin = ((.plugin // []) + ["/opt/ponytail/.opencode/plugins/ponytail.mjs"])' \
                /root/.config/opencode/opencode.json > /tmp/opencode.json \
            && mv /tmp/opencode.json /root/.config/opencode/opencode.json; \
        else \
-           printf '{"$schema":"https://opencode.ai/config.json","plugin":["/opt/ponytail/.opencode/plugins/ponytail.mjs"]}\n' \
+           printf '%s\n' '{"$schema":"https://opencode.ai/config.json","plugin":["/opt/ponytail/.opencode/plugins/ponytail.mjs"]}' \
                > /root/.config/opencode/opencode.json; \
        fi
 
