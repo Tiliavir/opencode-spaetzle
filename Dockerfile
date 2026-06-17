@@ -96,6 +96,22 @@ RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/inst
 # Install GSD2 (gsd-pi)
 RUN npm install -g gsd-pi@3.0.0
 
+# Install Ponytail v4.7.0 — AI agent "lazy senior dev" skill (DietrichGebert/ponytail)
+# OpenCode: plugin registered in global opencode.json (README: add to opencode.json with absolute path)
+# Claude Code: plugin pre-installed at ~/.claude/plugins/ponytail (README: /plugin install ponytail@ponytail)
+RUN git clone --branch v4.7.0 --depth 1 https://github.com/DietrichGebert/ponytail.git /opt/ponytail \
+    && mkdir -p /root/.config/opencode \
+    && if [ -f /root/.config/opencode/opencode.json ]; then \
+           jq '.plugin = ((.plugin // []) + ["/opt/ponytail/.opencode/plugins/ponytail.mjs"])' \
+               /root/.config/opencode/opencode.json > /tmp/opencode.json \
+           && mv /tmp/opencode.json /root/.config/opencode/opencode.json; \
+       else \
+           printf '%s\n' '{"$schema":"https://opencode.ai/config.json","plugin":["/opt/ponytail/.opencode/plugins/ponytail.mjs"]}' \
+               > /root/.config/opencode/opencode.json; \
+       fi \
+    && mkdir -p /root/.claude/plugins \
+    && cp -r /opt/ponytail /root/.claude/plugins/ponytail
+
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
