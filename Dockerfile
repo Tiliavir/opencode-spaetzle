@@ -20,51 +20,53 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep=13.0.0-4+b2 \
     fd-find=8.6.0-3 \
     tree=2.1.0-1 \
-    universal-ctags=5.9.20210829.0-1 \
     # CLI utilities
     nano=7.2-1+deb12u1 \
     less=590-2.1~deb12u2 \
     jq=1.6-2.1+deb12u1 \
     unzip=6.0-28 \
     procps=2:4.0.2-3 \
-    htop=3.2.2-2 \
     bat=0.22.1-4 \
-    # Networking tools
-    iputils-ping=3:20221126-1+deb12u1 \
-    telnet=0.17+2.4-2+deb12u3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Shell usability improvements
 RUN echo 'alias ll="ls -lah"' >> /root/.bashrc \
     && echo 'alias cat="batcat --paging=never"' >> /root/.bashrc
 
-# Install Node.js 22 via NodeSource (gsd-pi requires Node >= 22)
+# Install Node.js 22 via NodeSource (GSD requires Node/npx)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs=22.22.0-1nodesource1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install OpenCode CLI
-RUN curl -fsSL https://opencode.ai/install | bash
-
-# Add OpenCode install location to PATH
+# Add ~/.local/bin to PATH (used by Claude Code CLI)
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Install GSD (get-shit-done-cc) and pre-configure for OpenCode + Claude
-RUN npx --yes get-shit-done-cc@latest --opencode --global \
-    && npx --yes get-shit-done-cc@latest --claude --global
+# Install GSD (get-shit-done-cc) and pre-configure for Claude
+RUN npx --yes get-shit-done-cc@latest --claude --global
 
 # Install Graphify — AI knowledge graph (PyPI: graphifyy)
 # hadolint ignore=DL3013,DL3042
 RUN pip install --break-system-packages --no-cache-dir "graphifyy[all]"
 
-# Install Caveman — output token compression for AI agents
-RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
-
-# Install GSD2 (gsd-pi)
-RUN npm install -g gsd-pi@2.58.0
-
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Install ponytail plugin for Claude Code
+RUN git clone --depth 1 \
+      https://github.com/DietrichGebert/ponytail.git \
+      /root/.claude/plugins/marketplaces/ponytail \
+    && PONYTAIL_VER=$(jq -r '.version' /root/.claude/plugins/marketplaces/ponytail/.claude-plugin/plugin.json) \
+    && PONYTAIL_SHA=$(git -C /root/.claude/plugins/marketplaces/ponytail rev-parse HEAD) \
+    && mkdir -p "/root/.claude/plugins/cache/ponytail/ponytail/${PONYTAIL_VER}" \
+    && cp -r /root/.claude/plugins/marketplaces/ponytail/. \
+       "/root/.claude/plugins/cache/ponytail/ponytail/${PONYTAIL_VER}/" \
+    && jq -n --arg ver "$PONYTAIL_VER" --arg sha "$PONYTAIL_SHA" \
+       '{"version":2,"plugins":{"ponytail@ponytail":[{"scope":"user","installPath":("/root/.claude/plugins/cache/ponytail/ponytail/"+$ver),"version":$ver,"gitCommitSha":$sha}]}}' \
+       > /root/.claude/plugins/installed_plugins.json \
+    && jq -n '{"ponytail":{"source":{"source":"github","repo":"DietrichGebert/ponytail"},"installLocation":"/root/.claude/plugins/marketplaces/ponytail"}}' \
+       > /root/.claude/plugins/known_marketplaces.json \
+    && jq -n '{"extraKnownMarketplaces":{"ponytail":{"source":{"source":"github","repo":"DietrichGebert/ponytail"}}},"enabledPlugins":{"ponytail@ponytail":true}}' \
+       > /root/.claude/settings.json
 
 WORKDIR /workspace
 

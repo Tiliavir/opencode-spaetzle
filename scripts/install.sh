@@ -2,16 +2,16 @@
 # install.sh — Install spaetzle wrapper script for devcon-spaetzle
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash
 #
 # Or to install to a custom location:
-#   curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash -s -- --install-dir /custom/path
+#   curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash -s -- --install-dir /custom/path
 
 set -euo pipefail
 
 SCRIPT_NAME="spaetzle"
 INSTALL_DIR="${HOME}/.local/bin"
-DEFAULT_IMAGE="ghcr.io/tiliavir/devcon-spaetzle:latest"
+DEFAULT_IMAGE="ghcr.io/tiliavir/devcon-spaetzle:claude"
 
 usage() {
     cat <<EOF
@@ -26,13 +26,13 @@ OPTIONS:
 
 EXAMPLES:
     # Default install
-    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash
 
     # Custom install directory
-    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash -s -- --install-dir /usr/local/bin
+    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash -s -- --install-dir /usr/local/bin
 
     # Custom Docker image
-    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash -s -- --image my-registry/devcon-spaetzle:dev
+    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash -s -- --image my-registry/devcon-spaetzle:dev
 EOF
 }
 
@@ -73,7 +73,6 @@ info "Docker found: $(docker --version)"
 CONTAINER_USER_HOME="/root"
 HOME_DIR="${HOME}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME_DIR}/.config}"
-XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME_DIR}/.local/share}"
 
 escape_for_double_quotes() {
     local value="$1"
@@ -114,8 +113,7 @@ fi
 add_static_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/github-copilot"
 add_static_mount "${XDG_CONFIG_HOME}/npm" "${CONTAINER_USER_HOME}/.config/npm"
 add_static_mount "${HOME_DIR}/.npmrc" "${CONTAINER_USER_HOME}/.npmrc"
-add_static_mount "${HOME_DIR}/.m2" "${CONTAINER_USER_HOME}/.m2"
-add_static_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/opencode"
+add_static_mount "${HOME_DIR}/.claude" "${CONTAINER_USER_HOME}/.claude" "rw"
 
 if [ "${#STATIC_MOUNT_LINES[@]}" -eq 0 ]; then
     warn "No optional host mounts detected at install time"
@@ -143,7 +141,7 @@ wrapper_template="$(cat << 'WRAPPER_EOF'
 # spaetzle — Docker wrapper for devcon-spaetzle
 #
 # Uses host paths detected during installation (Git config, SSH keys,
-# npmrc, Maven settings) and forwards API tokens when present.
+# Claude auth) and forwards API tokens when present.
 #
 # Usage:
 #   spaetzle [flags] [docker run extra flags…] [-- command]
@@ -155,14 +153,14 @@ wrapper_template="$(cat << 'WRAPPER_EOF'
 #
 # Examples:
 #   spaetzle
-#   spaetzle -e OPENAI_API_KEY=sk-...
-#   spaetzle -- opencode
+#   spaetzle -e ANTHROPIC_API_KEY=sk-...
+#   spaetzle -- claude
 #   spaetzle --recreate
 #   spaetzle --update
 
 set -euo pipefail
 
-IMAGE="${OPENCODE_IMAGE:-ghcr.io/tiliavir/devcon-spaetzle:latest}"
+IMAGE="${SPAETZLE_IMAGE:-ghcr.io/tiliavir/devcon-spaetzle:claude}"
 WORKSPACE="${WORKSPACE:-$(pwd)}"
 
 RECREATE=false
@@ -205,7 +203,7 @@ if [ "${UPDATE}" = "true" ]; then
     info "Pulling latest image..."
     docker pull "${IMAGE}"
     info "Re-installing spaetzle wrapper..."
-    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash
     exit 0
 fi
 

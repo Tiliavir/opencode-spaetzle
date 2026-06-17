@@ -2,7 +2,7 @@
 # scripts/run.sh — convenience wrapper for devcon-spaetzle
 #
 # Automatically detects and mounts host paths (Git config, SSH keys,
-# Copilot/OpenCode auth stores) and forwards GITHUB_TOKEN when present.
+# Claude/Copilot auth stores) and forwards GITHUB_TOKEN when present.
 #
 # Usage:
 #   ./scripts/run.sh [flags] [docker run extra flags…] [-- command]
@@ -13,13 +13,13 @@
 #
 # Examples:
 #   ./scripts/run.sh
-#   ./scripts/run.sh -e OPENAI_API_KEY=sk-...
-#   ./scripts/run.sh -- opencode
+#   ./scripts/run.sh -e ANTHROPIC_API_KEY=sk-...
+#   ./scripts/run.sh -- claude
 #   ./scripts/run.sh --recreate
 
 set -euo pipefail
 
-IMAGE="${OPENCODE_IMAGE:-ghcr.io/tiliavir/devcon-spaetzle:latest}"
+IMAGE="${SPAETZLE_IMAGE:-ghcr.io/tiliavir/devcon-spaetzle:claude}"
 WORKSPACE="${WORKSPACE:-$(pwd)}"
 CONTAINER_USER_HOME="${CONTAINER_USER_HOME:-/root}"
 RECREATE=false
@@ -34,9 +34,10 @@ info()  { echo "[run.sh] $*"; }
 maybe_mount() {
   local host_path="$1"
   local container_path="$2"
+  local mode="${3:-ro}"
   if [ -e "$host_path" ]; then
-    MOUNTS+=("-v" "${host_path}:${container_path}:ro")
-    info "Mounting ${host_path} → ${container_path} (read-only)"
+    MOUNTS+=("-v" "${host_path}:${container_path}:${mode}")
+    info "Mounting ${host_path} → ${container_path} (${mode})"
   fi
 }
 
@@ -72,7 +73,7 @@ done
 
 ENV_FLAGS=()
 
-# GitHub token — used by GitHub Copilot provider in OpenCode
+# GitHub token — used by GitHub Copilot provider
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   ENV_FLAGS+=("-e" "GITHUB_TOKEN=${GITHUB_TOKEN}")
   info "Forwarding GITHUB_TOKEN"
@@ -110,12 +111,8 @@ fi
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
 maybe_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/github-copilot"
 
-# OpenCode auth store (read-only)
-XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
-maybe_mount "${XDG_DATA_HOME}/opencode" "${CONTAINER_USER_HOME}/.local/share/opencode"
-
-# Claude Code credential store (read-only)
-maybe_mount "${HOME}/.claude" "${CONTAINER_USER_HOME}/.claude"
+# Claude Code credential and plugin store (read-write)
+maybe_mount "${HOME}/.claude" "${CONTAINER_USER_HOME}/.claude" "rw"
 
 # ── launch ─────────────────────────────────────────────────────────────────────
 

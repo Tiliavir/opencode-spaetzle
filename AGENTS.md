@@ -1,8 +1,9 @@
 # AGENTS.md — Codebase Guide for AI Coding Agents
 
-This repository is a Docker infrastructure project that packages the
-[OpenCode](https://opencode.ai) AI coding agent as a portable container image,
-with cross-platform installer scripts for Bash and PowerShell.
+This repository is a Docker infrastructure project that packages
+[Claude Code](https://claude.ai/code) as a portable container image,
+with the [ponytail](https://github.com/DietrichGebert/ponytail) plugin
+pre-installed and cross-platform installer scripts for Bash and PowerShell.
 
 **There is no application source code, no package manager, and no language-level build system.**
 The deliverables are a `Dockerfile` and shell scripts.
@@ -12,7 +13,7 @@ The deliverables are a `Dockerfile` and shell scripts.
 ## Project Layout
 
 ```
-opencode-spaetzle/
+devcon-spaetzle/
 ├── Dockerfile                  # Core artifact — the container image definition
 ├── scripts/
 │   ├── run.sh                  # Dynamic run wrapper (detects mounts at runtime)
@@ -25,7 +26,7 @@ opencode-spaetzle/
     ├── dependabot.yml
     └── workflows/
         ├── ci.yml              # Lint, security scan, build verification
-        └── release.yml         # Multi-arch image build & push to GHCR on semver tags
+        └── release.yml         # Multi-arch image build & push to GHCR on tags and claude branch
 ```
 
 ---
@@ -36,13 +37,13 @@ opencode-spaetzle/
 
 ```bash
 # Build the image locally
-docker build -t opencode-dev .
+docker build -t devcon-spaetzle:claude .
 
 # Run the container against the current directory
 ./scripts/run.sh
 
 # Build a named image for scanning
-docker build -t opencode-spaetzle:scan .
+docker build -t devcon-spaetzle:scan .
 ```
 
 ### Dockerfile Linting (hadolint)
@@ -62,8 +63,8 @@ Any hadolint warning is a CI failure.
 
 ```bash
 # Build and scan the image
-docker build -t opencode-spaetzle:scan .
-trivy image opencode-spaetzle:scan
+docker build -t devcon-spaetzle:scan .
+trivy image devcon-spaetzle:scan
 ```
 
 CI uploads results as SARIF to the GitHub Security tab.
@@ -75,12 +76,18 @@ The equivalent of "running the tests" is:
 
 ```bash
 hadolint Dockerfile          # Static analysis
-docker build -t opencode-dev .  # End-to-end build verification
+docker build -t devcon-spaetzle:claude .  # End-to-end build verification
 ```
 
 ### Releasing
 
-Releases are fully automated via git tags:
+The `claude` branch auto-publishes on every push:
+
+```
+ghcr.io/tiliavir/devcon-spaetzle:claude
+```
+
+For the main branch, releases are triggered via git tags:
 
 ```bash
 git tag v1.2.3
@@ -88,8 +95,8 @@ git push origin v1.2.3
 ```
 
 The `release.yml` workflow builds a multi-arch image (`linux/amd64`, `linux/arm64`),
-pushes it to GHCR as `ghcr.io/tiliavir/opencode-spaetzle`, and auto-creates a
-GitHub Release with generated notes.
+pushes it to GHCR, and (for semver tags) auto-creates a GitHub Release with
+generated notes.
 
 ---
 

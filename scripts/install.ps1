@@ -1,14 +1,14 @@
 # install.ps1 — Install spaetzle wrapper script for devcon-spaetzle
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 | iex
 #
 # Or to install to a custom location:
-#   irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.ps1 | iex -InstallDir "C:\bin"
+#   irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 | iex -InstallDir "C:\bin"
 
 param(
     [string]$InstallDir = "$env:USERPROFILE\.local\bin",
-    [string]$Image = "ghcr.io/tiliavir/devcon-spaetzle:latest"
+    [string]$Image = "ghcr.io/tiliavir/devcon-spaetzle:claude"
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,7 +41,6 @@ Write-Info "Docker found: $dockerVersion"
 $containerHome = "/root"
 $homeDir = $env:USERPROFILE
 $configHome = Join-Path $homeDir ".config"
-$dataHome = Join-Path $homeDir ".local\share"
 
 $staticMountDefinitions = [System.Collections.Generic.List[string]]::new()
 $staticMountInfoLines = [System.Collections.Generic.List[string]]::new()
@@ -74,8 +73,7 @@ if (Test-Path $sshDir) {
 Add-StaticMountDefinition -HostPath (Join-Path $configHome "github-copilot") -ContainerPath "$containerHome/.config/github-copilot"
 Add-StaticMountDefinition -HostPath (Join-Path $configHome "npm") -ContainerPath "$containerHome/.config/npm"
 Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".npmrc") -ContainerPath "$containerHome/.npmrc"
-Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".m2") -ContainerPath "$containerHome/.m2"
-Add-StaticMountDefinition -HostPath (Join-Path $dataHome "opencode") -ContainerPath "$containerHome/.local/share/opencode"
+Add-StaticMountDefinition -HostPath (Join-Path $homeDir ".claude") -ContainerPath "$containerHome/.claude" -Mode "rw"
 
 $staticMountsBlock = "    # No optional mounts detected during installation"
 if ($staticMountDefinitions.Count -gt 0) {
@@ -103,7 +101,7 @@ $scriptContent = @'
 # spaetzle — Docker wrapper for devcon-spaetzle
 #
 # Uses host paths detected during installation (Git config, SSH keys,
-# npmrc, Maven settings) and forwards API tokens when present.
+# Claude auth) and forwards API tokens when present.
 #
 # Usage:
 #   spaetzle.ps1 [flags] [docker run extra flags...] [-- command]
@@ -115,20 +113,20 @@ $scriptContent = @'
 #
 # Examples:
 #   spaetzle.ps1
-#   spaetzle.ps1 -e OPENAI_API_KEY=sk-...
-#   spaetzle.ps1 -- opencode
+#   spaetzle.ps1 -e ANTHROPIC_API_KEY=sk-...
+#   spaetzle.ps1 -- claude
 #   spaetzle.ps1 --recreate
 #   spaetzle.ps1 --update
 
 param(
-    [string]$Image = $env:OPENCODE_IMAGE,
+    [string]$Image = $env:SPAETZLE_IMAGE,
     [string]$Workspace = $PWD,
     [string[]]$ExtraArgs = @(),
     [string[]]$Command = @()
 )
 
 if (-not $Image) {
-    $Image = "ghcr.io/tiliavir/devcon-spaetzle:latest"
+    $Image = "ghcr.io/tiliavir/devcon-spaetzle:claude"
 }
 
 $ErrorActionPreference = "Stop"
@@ -157,7 +155,7 @@ if ($Update) {
     Write-Info "Pulling latest image..."
     docker pull $Image
     Write-Info "Re-installing spaetzle wrapper..."
-    irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.ps1 | iex
+    irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 | iex
     exit 0
 }
 

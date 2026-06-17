@@ -1,6 +1,6 @@
 # Development guide
 
-This document covers how to develop and maintain the `devcon-spaetzle` project.
+This document covers how to develop and maintain the `devcon-spaetzle` project (claude variant).
 
 ## Repository structure
 
@@ -15,7 +15,9 @@ devcon-spaetzle/
 │   ├── architecture.md         # Image design decisions
 │   └── development.md          # This file
 ├── scripts/
-│   └── run.sh                  # Convenience run wrapper (auto-mounts, forwards tokens)
+│   ├── run.sh                  # Convenience run wrapper (auto-mounts, forwards tokens)
+│   ├── install.sh              # Bash installer (generates spaetzle wrapper)
+│   └── install.ps1             # PowerShell installer (generates spaetzle.ps1 + .cmd)
 ├── Dockerfile                  # Main image definition
 ├── .dockerignore               # Files excluded from Docker build context
 ├── README.md                   # User-facing documentation
@@ -27,7 +29,7 @@ devcon-spaetzle/
 ### Build the image
 
 ```bash
-docker build -t opencode-dev .
+docker build -t devcon-spaetzle:claude .
 ```
 
 ### Run the container
@@ -36,7 +38,7 @@ docker build -t opencode-dev .
 docker run -it \
   -v $(pwd):/workspace \
   -w /workspace \
-  opencode-dev
+  devcon-spaetzle:claude
 ```
 
 Or use the convenience wrapper (auto-detects git config, SSH keys, and tokens):
@@ -61,14 +63,14 @@ hadolint Dockerfile
 Install [Trivy](https://github.com/aquasecurity/trivy) and run:
 
 ```bash
-trivy image opencode-dev
+trivy image devcon-spaetzle:claude
 ```
 
 ## CI/CD pipeline
 
 ### CI workflow (`.github/workflows/ci.yml`)
 
-Triggered on every push to `main` and on every pull request targeting `main`.
+Triggered on every push to `main` or `claude` and on every pull request targeting `main`.
 
 | Job | Description |
 |-----|-------------|
@@ -79,8 +81,14 @@ Triggered on every push to `main` and on every pull request targeting `main`.
 
 ### Release workflow (`.github/workflows/release.yml`)
 
-Triggered when a tag matching `v*.*.*` is pushed.
+Triggered when a tag matching `v*.*.*` is pushed, or when the `claude` branch is pushed.
 
+**For the `claude` branch:**
+- Builds multi-arch (`linux/amd64`, `linux/arm64`)
+- Pushes to GHCR as `ghcr.io/tiliavir/devcon-spaetzle:claude`
+- No GitHub Release is created
+
+**For semver tags:**
 1. Builds the image for `linux/amd64` **and** `linux/arm64` (Apple Silicon compatible)
 2. Pushes to [GitHub Container Registry (GHCR)](https://ghcr.io) with multiple tags:
    - `ghcr.io/tiliavir/devcon-spaetzle:latest`
@@ -89,7 +97,18 @@ Triggered when a tag matching `v*.*.*` is pushed.
    - `ghcr.io/tiliavir/devcon-spaetzle:1`
 3. Creates a GitHub Release with auto-generated release notes
 
-## Creating a release
+## Publishing the claude variant
+
+Simply push to the `claude` branch:
+
+```bash
+git push origin claude
+```
+
+The release workflow automatically builds and publishes
+`ghcr.io/tiliavir/devcon-spaetzle:claude`.
+
+## Creating a release (main branch)
 
 ```bash
 # Tag the commit

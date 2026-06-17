@@ -1,9 +1,11 @@
-# devcon-spaetzle 🥣
+# devcon-spaetzle (claude variant)
 
 > **Smart Programming Ägent for Task-realization with Zero-friction in a Locked-down Environment.**
 
-A minimal but practical Docker-based development environment for running the
-[OpenCode](https://opencode.ai) AI coding agent interactively on any local repository.
+A minimal but practical Docker-based development environment for running
+[Claude Code](https://claude.ai/code) interactively on any local repository.
+Comes with the [ponytail](https://github.com/DietrichGebert/ponytail) plugin
+pre-installed.
 
 ---
 
@@ -12,13 +14,13 @@ A minimal but practical Docker-based development environment for running the
 ### Bash (Linux/macOS/Git Bash)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash
 ```
 
 ### PowerShell (Windows)
 
 ```powershell
-irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 | iex
 ```
 
 After installation, run:
@@ -34,12 +36,12 @@ This starts the container with your current directory mounted as `/workspace`.
 ## Features
 
 - **Debian bookworm-slim** base — minimal, stable, production-grade
-- Full **Node.js 22 / npm** stack for OpenCode and related tooling (via [NodeSource](https://github.com/nodesource/distributions))
-- Rich set of **CLI tools**: `ripgrep`, `fd`, `bat`, `tree`, `ctags`, `jq`, `htop` and more
-- **[OpenCode CLI](https://opencode.ai)** pre-installed and on `PATH`
+- Full **Node.js 22 / npm** stack for tooling (via [NodeSource](https://github.com/nodesource/distributions))
+- Rich set of **CLI tools**: `ripgrep`, `fd`, `bat`, `tree`, `jq` and more
 - **[Claude Code CLI](https://claude.ai/code)** pre-installed and on `PATH`
-- **[GSD (get-shit-done-cc)](https://www.npmjs.com/package/get-shit-done-cc)** pre-installed and pre-configured for OpenCode
-- **[GSD2 (gsd-pi)](https://github.com/gsd-build/gsd-2)** pre-installed (`gsd` / `gsd-cli` commands available)
+- **[ponytail](https://github.com/DietrichGebert/ponytail)** plugin pre-installed — lazy senior dev mode for Claude Code
+- **[GSD (get-shit-done-cc)](https://www.npmjs.com/package/get-shit-done-cc)** pre-installed and pre-configured for Claude
+- **[Graphify (graphifyy)](https://pypi.org/project/graphifyy/)** pre-installed — AI knowledge graph
 - Sensible shell aliases (`ll`, `cat` → `batcat`)
 - Interactive terminal support (`TERM=xterm-256color`)
 
@@ -48,7 +50,7 @@ This starts the container with your current directory mounted as `/workspace`.
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) ≥ 20.10
-- `GITHUB_TOKEN` (optional, for GitHub Copilot provider)
+- `ANTHROPIC_API_KEY` (for Claude Code)
 
 ---
 
@@ -59,13 +61,15 @@ This starts the container with your current directory mounted as `/workspace`.
 | `~/.gitconfig` | `/root/.gitconfig` | ro |
 | `~/.config/git/` | `/root/.config/git/` | ro |
 | `~/.ssh/` | `/root/.ssh/` | ro |
-| `~/.npmrc` | `/root/.npmrc` | ro |
-| `~/.config/npm/` | `/root/.config/npm/` | ro |
-| `~/.m2/` | `/root/.m2/` | ro |
 | `~/.config/github-copilot/` | `/root/.config/github-copilot/` | ro |
-| `~/.local/share/opencode/` | `/root/.local/share/opencode/` | ro |
-| `~/.claude/` | `/root/.claude/` | ro |
+| `~/.claude/` | `/root/.claude/` | **rw** |
 | `$(pwd)` | `/workspace` | **rw** |
+
+> **Note:** The `~/.claude/` mount is read-write because Claude Code writes auth
+> credentials, session state, and plugin data during normal operation. When mounted,
+> host settings take precedence over the image's baked defaults (including the
+> pre-configured ponytail plugin). If ponytail is not configured on the host,
+> enable it via `claude /plugin install ponytail@ponytail`.
 
 ---
 
@@ -79,7 +83,7 @@ This starts the container with your current directory mounted as `/workspace`.
 
 ## Usage
 
-### Starting OpenCode
+### Starting the container
 
 ```bash
 spaetzle
@@ -88,13 +92,13 @@ spaetzle
 ### Passing a custom command
 
 ```bash
-spaetzle -- opencode
+spaetzle -- claude
 ```
 
 ### Passing environment variables
 
 ```bash
-spaetzle -e OPENAI_API_KEY=sk-...
+spaetzle -e ANTHROPIC_API_KEY=sk-...
 ```
 
 ### Version info
@@ -127,7 +131,7 @@ version of devcon-spaetzle is released.
 ### Custom Docker image
 
 ```bash
-OPENCODE_IMAGE=my-custom-image spaetzle
+SPAETZLE_IMAGE=my-custom-image spaetzle
 ```
 
 Or during install:
@@ -143,8 +147,6 @@ curl -fsSL .../install.sh | bash -s -- --install-dir /usr/local/bin
 
 ---
 
----
-
 ## Dev Container
 
 Add `.devcontainer/devcontainer.json` to your project:
@@ -152,7 +154,7 @@ Add `.devcontainer/devcontainer.json` to your project:
 ```jsonc
 {
   "name": "devcon-spaetzle",
-  "image": "ghcr.io/tiliavir/devcon-spaetzle:latest",
+  "image": "ghcr.io/tiliavir/devcon-spaetzle:claude",
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
   "remoteEnv": {
@@ -165,10 +167,9 @@ Add `.devcontainer/devcontainer.json` to your project:
     "source=${localEnv:HOME}/.config/git,target=/root/.config/git,type=bind,readonly",
     "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
     "source=${localEnv:HOME}/.config/github-copilot,target=/root/.config/github-copilot,type=bind,readonly",
-    "source=${localEnv:HOME}/.local/share/opencode,target=/root/.local/share/opencode,type=bind,readonly",
-    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,readonly"
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind"
   ],
-  "postCreateCommand": "opencode --version",
+  "postCreateCommand": "claude --version",
   "terminal.integrated.defaultProfile.linux": "bash"
 }
 ```
@@ -178,7 +179,7 @@ Add `.devcontainer/devcontainer.json` to your project:
 ## Building from source
 
 ```bash
-docker build -t devcon-spaetzle .
+docker build -t devcon-spaetzle:claude .
 ```
 
 ---
@@ -186,7 +187,7 @@ docker build -t devcon-spaetzle .
 ## Security notes
 
 - **Never bake credentials** — API keys must be passed at runtime via `-e` or mounted read-only
-- **Read-only mounts** — All config mounts use `:ro`; only workspace is `:rw`
+- **Read-only mounts** — All config mounts use `:ro` except `~/.claude/` (rw for auth/plugin state); only workspace is `:rw`
 - **No tokens in URLs** — Use SSH remotes or credential helpers, never `https://token@github.com/...`
 
 ---

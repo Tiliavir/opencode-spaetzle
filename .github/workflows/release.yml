@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*.*.*"
+    branches:
+      - "claude"
 
 permissions:
   contents: read
@@ -13,9 +15,21 @@ jobs:
   release:
     name: Build & push Docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Determine build variant
+        id: variant
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/claude" ]]; then
+            echo "is_claude=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_claude=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up QEMU (multi-platform builds)
         uses: docker/setup-qemu-action@v4
@@ -36,13 +50,14 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
+            ${{ steps.variant.outputs.is_claude == 'true' && 'type=raw,value=claude' || '' }}
+            ${{ steps.variant.outputs.is_claude != 'true' && 'type=semver,pattern={{version}}' || '' }}
+            ${{ steps.variant.outputs.is_claude != 'true' && 'type=semver,pattern={{major}}.{{minor}}' || '' }}
+            ${{ steps.variant.outputs.is_claude != 'true' && 'type=semver,pattern={{major}}' || '' }}
+            ${{ steps.variant.outputs.is_claude != 'true' && 'type=raw,value=latest' || '' }}
           labels: |
             org.opencontainers.image.title=devcon-spaetzle
-            org.opencontainers.image.description=Docker dev environment for the OpenCode AI coding agent
+            org.opencontainers.image.description=${{ steps.variant.outputs.is_claude == 'true' && 'Docker dev environment for Claude Code' || 'Docker dev environment for the OpenCode AI coding agent' }}
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
@@ -59,6 +74,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Create GitHub Release
+        if: steps.variant.outputs.is_claude != 'true'
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
