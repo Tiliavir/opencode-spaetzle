@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates=20230311+deb12u1 \
     python3=3.11.2-1+b1 \
     python3-pip=23.0.1+dfsg-1 \
+    python3-dev=3.11.2-1+b1 \
     # ponytail: keep for graphifyy native deps and user runtime; drop if wheels-only confirmed
     build-essential=12.9 \
     # Repository navigation tools
