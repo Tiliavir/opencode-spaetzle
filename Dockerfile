@@ -93,7 +93,7 @@ RUN pip install --break-system-packages --no-cache-dir "graphifyy[all]"
 # Install Caveman — output token compression for AI agents
 RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
 
-# Install GSD2 (gsd-pi) and Ponytail
+# Install GSD2 (gsd-pi) and Ponytail (ponytail)
 RUN npm install -g gsd-pi@3.0.0 \
     && npm install -g ponytail@1.0.57
 
