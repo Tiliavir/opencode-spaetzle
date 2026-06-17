@@ -97,11 +97,12 @@ RUN curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/inst
 RUN npm install -g gsd-pi@3.0.0
 
 # Install Ponytail v4.7.0 — AI agent "lazy senior dev" skill (DietrichGebert/ponytail)
-# Clones to /opt/ponytail and registers the OpenCode plugin in the global config
-RUN git clone --depth 1 --branch v4.7.0 https://github.com/DietrichGebert/ponytail.git /opt/ponytail \
+# Clones to /opt/ponytail (pinned to v4.7.0 SHA) and registers the OpenCode plugin in the global config
+RUN git clone --depth 1 https://github.com/DietrichGebert/ponytail.git /opt/ponytail \
+    && git -C /opt/ponytail checkout adad50d9b393926b2dd5ed7225dcb1848b9df408 \
     && mkdir -p /root/.config/opencode \
     && if [ -f /root/.config/opencode/opencode.json ]; then \
-           jq '.plugin += ["/opt/ponytail/.opencode/plugins/ponytail.mjs"]' \
+           jq '.plugin = ((.plugin // []) + ["/opt/ponytail/.opencode/plugins/ponytail.mjs"])' \
                /root/.config/opencode/opencode.json > /tmp/opencode.json \
            && mv /tmp/opencode.json /root/.config/opencode/opencode.json; \
        else \
