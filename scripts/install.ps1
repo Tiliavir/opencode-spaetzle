@@ -118,21 +118,15 @@ $scriptContent = @'
 #   spaetzle.ps1 --recreate
 #   spaetzle.ps1 --update
 
-param(
-    [string]$Image = $env:SPAETZLE_IMAGE,
-    [string]$Workspace = $PWD,
-    [string[]]$ExtraArgs = @(),
-    [string[]]$Command = @()
-)
-
-if (-not $Image) {
-    $Image = "ghcr.io/tiliavir/devcon-spaetzle:claude"
-}
+param()
 
 $ErrorActionPreference = "Stop"
 
-$Recreate = $args -contains "--recreate"
-$Update = $args -contains "--update"
+$BAKED_INSTALL_DIR = "__INSTALL_DIR__"
+$BAKED_IMAGE = "__DEFAULT_IMAGE__"
+
+$Image = if ($env:SPAETZLE_IMAGE) { $env:SPAETZLE_IMAGE } else { $BAKED_IMAGE }
+$Workspace = "$PWD"
 
 function Write-Info {
     param([string]$Message)
@@ -144,18 +138,46 @@ function Write-Warn {
     Write-Host "[spaetzle] WARNING: $Message" -ForegroundColor Yellow
 }
 
-if ($args -contains "-v" -or $args -contains "--version") {
-    Write-Info "spaetzle wrapper for devcon-spaetzle"
-    Write-Info "Image: $Image"
-    Write-Info "Workspace: $Workspace"
-    exit 0
+function Write-Error {
+    param([string]$Message)
+    Write-Host "[spaetzle] ERROR: $Message" -ForegroundColor Red
+    exit 1
+}
+
+# Manual arg parsing for cross-platform parity with the Bash wrapper
+$Recreate = $false
+$Update = $false
+$ExtraArgs = [System.Collections.Generic.List[string]]::new()
+$Command = [System.Collections.Generic.List[string]]::new()
+$passthrough = $false
+
+foreach ($a in $args) {
+    if ($passthrough) {
+        $Command.Add($a)
+    } elseif ($a -eq "--") {
+        $passthrough = $true
+    } elseif ($a -eq "--recreate") {
+        $Recreate = $true
+    } elseif ($a -eq "--update") {
+        $Update = $true
+    } elseif ($a -eq "--version") {
+        Write-Info "spaetzle wrapper for devcon-spaetzle"
+        Write-Info "Image: $Image"
+        Write-Info "Workspace: $Workspace"
+        exit 0
+    } else {
+        $ExtraArgs.Add($a)
+    }
 }
 
 if ($Update) {
     Write-Info "Pulling latest image..."
     docker pull $Image
     Write-Info "Re-installing spaetzle wrapper..."
-    irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 | iex
+    $tmp = [System.IO.Path]::GetTempFileName() + ".ps1"
+    irm https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.ps1 -OutFile $tmp
+    & $tmp -InstallDir $BAKED_INSTALL_DIR -Image $BAKED_IMAGE
+    Remove-Item $tmp -Force
     exit 0
 }
 
@@ -196,25 +218,19 @@ if ($env:GITHUB_TOKEN) {
     }
 }
 
-if ($ExtraArgs) {
+if ($ExtraArgs.Count -gt 0) {
     $dockerArgs += $ExtraArgs
 }
 
 $dockerArgs += $Image
 
-if ($Command) {
+if ($Command.Count -gt 0) {
     $dockerArgs += $Command
 }
 
 Write-Info "Starting devcon-spaetzle container (image: $Image)"
 Write-Info "Workspace: $Workspace"
 Write-Info "Container label: $label"
-
-Write-Info "Checking for newer image..."
-$pullOutput = docker pull $Image 2>&1
-if ($pullOutput -match "Downloaded newer") {
-    Write-Info "A newer image was pulled. Run 'spaetzle --update' to regenerate the wrapper."
-}
 
 if ($Recreate) {
     $null = docker container inspect $label 2>&1
@@ -239,11 +255,19 @@ if ($LASTEXITCODE -eq 0) {
     exit
 }
 
+Write-Info "Checking for newer image..."
+$pullOutput = docker pull $Image 2>&1
+if ($pullOutput -match "Downloaded newer") {
+    Write-Info "A newer image was pulled."
+}
+
 & docker @dockerArgs
 '@
 
 $scriptContent = $scriptContent.Replace("__STATIC_MOUNTS__", $staticMountsBlock)
 $scriptContent = $scriptContent.Replace("__STATIC_MOUNT_INFO__", $staticMountInfoBlock)
+$scriptContent = $scriptContent.Replace("__DEFAULT_IMAGE__", $Image)
+$scriptContent = $scriptContent.Replace("__INSTALL_DIR__", $InstallDir)
 
 Set-Content -Path $spaetzleScript -Value $scriptContent -Encoding UTF8
 

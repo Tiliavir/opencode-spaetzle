@@ -47,7 +47,7 @@ EXTRA_ARGS=()
 CMD_OVERRIDE=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version|-v)
+    --version)
       echo "run.sh wrapper for devcon-spaetzle"
       echo "Image: ${IMAGE}"
       echo "Workspace: ${WORKSPACE}"
@@ -111,6 +111,10 @@ fi
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
 maybe_mount "${XDG_CONFIG_HOME}/github-copilot" "${CONTAINER_USER_HOME}/.config/github-copilot"
 
+# npm config (read-only)
+maybe_mount "${XDG_CONFIG_HOME}/npm" "${CONTAINER_USER_HOME}/.config/npm"
+maybe_mount "${HOME}/.npmrc" "${CONTAINER_USER_HOME}/.npmrc"
+
 # Claude Code credential and plugin store (read-write)
 maybe_mount "${HOME}/.claude" "${CONTAINER_USER_HOME}/.claude" "rw"
 
@@ -121,11 +125,6 @@ LABEL="spaetzle-$(basename "${WORKSPACE}")"
 info "Starting devcon-spaetzle container (image: ${IMAGE})"
 info "Workspace: ${WORKSPACE}"
 info "Container label: ${LABEL}"
-
-info "Checking for newer image..."
-if docker pull "${IMAGE}" 2>&1 | grep -q "Downloaded newer"; then
-    info "A newer image was pulled."
-fi
 
 if [ "${RECREATE}" = "true" ]; then
     if docker container inspect "${LABEL}" &>/dev/null; then
@@ -145,6 +144,11 @@ if docker container inspect "${LABEL}" &>/dev/null; then
     warn "Environment variables (tokens/keys) are from the original run and cannot be updated on reconnect."
     exec docker start -ai "${LABEL}"
   fi
+fi
+
+info "Checking for newer image..."
+if docker pull "${IMAGE}" 2>&1 | grep -q "Downloaded newer"; then
+    info "A newer image was pulled."
 fi
 
 exec docker run -it \

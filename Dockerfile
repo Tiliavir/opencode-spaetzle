@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates=20230311+deb12u1 \
     python3=3.11.2-1+b1 \
     python3-pip=23.0.1+dfsg-1 \
+    # ponytail: keep for graphifyy native deps and user runtime; drop if wheels-only confirmed
     build-essential=12.9 \
     # Repository navigation tools
     ripgrep=13.0.0-4+b2 \
@@ -31,7 +32,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Shell usability improvements
 RUN echo 'alias ll="ls -lah"' >> /root/.bashrc \
-    && echo 'alias cat="batcat --paging=never"' >> /root/.bashrc
+    && echo 'alias cat="batcat --paging=never"' >> /root/.bashrc \
+    && ln -s /usr/bin/fdfind /usr/local/bin/fd
 
 # Install Node.js 22 via NodeSource (GSD requires Node/npx)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
@@ -57,6 +59,7 @@ RUN git clone --depth 1 \
       /root/.claude/plugins/marketplaces/ponytail \
     && PONYTAIL_VER=$(jq -r '.version' /root/.claude/plugins/marketplaces/ponytail/.claude-plugin/plugin.json) \
     && PONYTAIL_SHA=$(git -C /root/.claude/plugins/marketplaces/ponytail rev-parse HEAD) \
+    && rm -rf /root/.claude/plugins/marketplaces/ponytail/.git \
     && mkdir -p "/root/.claude/plugins/cache/ponytail/ponytail/${PONYTAIL_VER}" \
     && cp -r /root/.claude/plugins/marketplaces/ponytail/. \
        "/root/.claude/plugins/cache/ponytail/ponytail/${PONYTAIL_VER}/" \
@@ -66,7 +69,12 @@ RUN git clone --depth 1 \
     && jq -n '{"ponytail":{"source":{"source":"github","repo":"DietrichGebert/ponytail"},"installLocation":"/root/.claude/plugins/marketplaces/ponytail"}}' \
        > /root/.claude/plugins/known_marketplaces.json \
     && jq -n '{"extraKnownMarketplaces":{"ponytail":{"source":{"source":"github","repo":"DietrichGebert/ponytail"}}},"enabledPlugins":{"ponytail@ponytail":true}}' \
-       > /root/.claude/settings.json
+       > /root/.claude/settings.json \
+    && cp -r /root/.claude /opt/claude-defaults
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 WORKDIR /workspace
 

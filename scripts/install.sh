@@ -160,7 +160,10 @@ wrapper_template="$(cat << 'WRAPPER_EOF'
 
 set -euo pipefail
 
-IMAGE="${SPAETZLE_IMAGE:-ghcr.io/tiliavir/devcon-spaetzle:claude}"
+BAKED_INSTALL_DIR="__INSTALL_DIR__"
+BAKED_IMAGE="__DEFAULT_IMAGE__"
+
+IMAGE="${SPAETZLE_IMAGE:-${BAKED_IMAGE}}"
 WORKSPACE="${WORKSPACE:-$(pwd)}"
 
 RECREATE=false
@@ -173,7 +176,7 @@ EXTRA_ARGS=()
 CMD_OVERRIDE=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --version|-v)
+        --version)
             echo "spaetzle wrapper for devcon-spaetzle"
             echo "Image: ${IMAGE}"
             echo "Workspace: ${WORKSPACE}"
@@ -203,7 +206,8 @@ if [ "${UPDATE}" = "true" ]; then
     info "Pulling latest image..."
     docker pull "${IMAGE}"
     info "Re-installing spaetzle wrapper..."
-    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/tiliavir/devcon-spaetzle/claude/scripts/install.sh \
+        | bash -s -- --install-dir "${BAKED_INSTALL_DIR}" --image "${BAKED_IMAGE}"
     exit 0
 fi
 
@@ -238,11 +242,6 @@ info "Starting devcon-spaetzle container (image: ${IMAGE})"
 info "Workspace: ${WORKSPACE}"
 info "Container label: ${LABEL}"
 
-info "Checking for newer image..."
-if docker pull "${IMAGE}" 2>&1 | grep -q "Downloaded newer"; then
-    info "A newer image was pulled. Run 'spaetzle --update' to regenerate the wrapper."
-fi
-
 if [ "${RECREATE}" = "true" ]; then
     if docker container inspect "${LABEL}" &>/dev/null; then
         info "Removing existing container '${LABEL}'..."
@@ -263,6 +262,11 @@ if docker container inspect "${LABEL}" &>/dev/null; then
     fi
 fi
 
+info "Checking for newer image..."
+if docker pull "${IMAGE}" 2>&1 | grep -q "Downloaded newer"; then
+    info "A newer image was pulled. Run 'spaetzle --update' to regenerate the wrapper."
+fi
+
 exec docker run -it \
     --name "${LABEL}" \
     -v "${WORKSPACE}:/workspace:rw" \
@@ -278,6 +282,8 @@ WRAPPER_EOF
 wrapper_content="$wrapper_template"
 wrapper_content="${wrapper_content/__STATIC_MOUNTS__/${STATIC_MOUNTS_BLOCK}}"
 wrapper_content="${wrapper_content/__STATIC_MOUNT_INFO__/${STATIC_MOUNT_INFO_BLOCK}}"
+wrapper_content="${wrapper_content/__DEFAULT_IMAGE__/${DEFAULT_IMAGE}}"
+wrapper_content="${wrapper_content/__INSTALL_DIR__/${INSTALL_DIR}}"
 
 printf '%s\n' "$wrapper_content" > "${INSTALL_DIR}/${SCRIPT_NAME}"
 
